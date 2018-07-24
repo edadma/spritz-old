@@ -91,11 +91,24 @@ class Server( val docRoot: Path, val port: Int ) {
       } else
         serve( file )
 
+      def extension( s: String ) =
+        s lastIndexOf '.' match {
+          case -1 => ""
+          case dot => s.substring( dot + 1 )
+        }
+
       def serve( f: Path ): Unit = {
         val coreContext = HttpCoreContext.adapt(context)
         val conn = coreContext.getConnection(classOf[HttpConnection])
         response.setStatusCode(HttpStatus.SC_OK)
-        val body = new NFileEntity(f.toFile, ContentType.create("text/html"))
+
+        val typ =
+          MediaType.table get extension( f.toString ) match {
+            case None => ContentType.APPLICATION_OCTET_STREAM
+            case Some( t ) => t
+          }
+
+        val body = new NFileEntity( f.toFile, typ )
         response.setEntity(body)
         println( s"$conn: serving file $f" )
       }
