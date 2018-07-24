@@ -57,6 +57,11 @@ libraryDependencies ++= {
 //}
 
 libraryDependencies ++= Seq(
+  "xyz.hyperreal" %% "yaml" % "0.1.5",
+  "xyz.hyperreal" %% "args" % "0.1"
+)
+
+libraryDependencies ++= Seq(
   "org.apache.httpcomponents" % "httpcore-nio" % "4.4.10"
 )
 

@@ -41,11 +41,24 @@ object Main extends App {
     val docRoot = new File(args(0))
     val port = 8080
     val sslContext = null
-    val config = IOReactorConfig.custom.setSoTimeout(15000).setTcpNoDelay(true).build
-    val server = ServerBootstrap.bootstrap.setListenerPort(port).setServerInfo("Test/1.1").setIOReactorConfig(config).setSslContext(sslContext).setExceptionLogger(ExceptionLogger.STD_ERR).registerHandler("*", new HttpFileHandler(docRoot)).create
-    server.start()
+    val config =
+      IOReactorConfig.custom.
+        setSoTimeout(15000).
+        setTcpNoDelay(true).
+        build
+    val server =
+      ServerBootstrap.bootstrap.
+        setListenerPort(port).
+        setServerInfo("Test/1.1").
+        setIOReactorConfig(config).
+        setSslContext(sslContext).
+        setExceptionLogger(ExceptionLogger.STD_ERR).
+        registerHandler("*", new HttpFileHandler(docRoot)).
+        create
+    server.start
     System.out.println("Serving " + docRoot + " on " + server.getEndpoint.getAddress )
     server.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         server.shutdown(5, TimeUnit.SECONDS)
@@ -53,21 +66,17 @@ object Main extends App {
     })
   }
 
-  private[nio] class HttpFileHandler(val docRoot: File) extends HttpAsyncRequestHandler[HttpRequest] {
+  private class HttpFileHandler(val docRoot: File) extends HttpAsyncRequestHandler[HttpRequest] {
     def processRequest(request: HttpRequest, context: HttpContext): HttpAsyncRequestConsumer[HttpRequest] = { // Buffer request content in memory for simplicity
       new BasicAsyncRequestConsumer
     }
 
-    @throws[HttpException]
-    @throws[IOException]
     def handle(request: HttpRequest, httpexchange: HttpAsyncExchange, context: HttpContext): Unit = {
       val response = httpexchange.getResponse
       handleInternal(request, response, context)
       httpexchange.submitResponse(new BasicAsyncResponseProducer(response))
     }
 
-    @throws[HttpException]
-    @throws[IOException]
     private def handleInternal(request: HttpRequest, response: HttpResponse, context: HttpContext): Unit = {
       val method = request.getRequestLine.getMethod.toUpperCase(Locale.ENGLISH)
       if (!(method == "GET") && !(method == "HEAD") && !(method == "POST")) throw new MethodNotSupportedException(method + " method not supported")
