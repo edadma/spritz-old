@@ -71,6 +71,7 @@ class Server( val docRoot: Path, val port: Int ) {
 
       val target = request.getRequestLine.getUri
       val file = rootdir resolve (URLDecoder.decode( target, "UTF-8" ) drop 1)
+      val index = file resolve "index.html"
 
       if (!Files.exists( file )) {
         response setStatusCode HttpStatus.SC_NOT_FOUND
@@ -79,18 +80,24 @@ class Server( val docRoot: Path, val port: Int ) {
 
         response.setEntity(entity)
         println( s"File $file not found")
+      } else if (Files.isDirectory( file ) && Files.exists( index ) && Files.isReadable( index ) &&
+        Files.isRegularFile( index)) {
+        serve( index )
       } else if (!Files.isReadable(file) || Files.isDirectory( file )) {
         response.setStatusCode(HttpStatus.SC_FORBIDDEN)
         val entity = new NStringEntity("<html><body><h1>Access denied</h1></body></html>", ContentType.create("text/html", "UTF-8"))
         response.setEntity(entity)
-        System.out.println( s"Cannot read file :$file" )
-      } else {
+        println( s"Cannot read file :$file" )
+      } else
+        serve( file )
+
+      def serve( f: Path ): Unit = {
         val coreContext = HttpCoreContext.adapt(context)
         val conn = coreContext.getConnection(classOf[HttpConnection])
         response.setStatusCode(HttpStatus.SC_OK)
-        val body = new NFileEntity(file.toFile, ContentType.create("text/html"))
+        val body = new NFileEntity(f.toFile, ContentType.create("text/html"))
         response.setEntity(body)
-        System.out.println( s"$conn: serving file $file" )
+        println( s"$conn: serving file $f" )
       }
     }
   }
