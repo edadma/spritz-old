@@ -74,21 +74,23 @@ class Server( val docRoot: Path, val port: Int ) {
       val index = file resolve "index.html"
 
       if (!Files.exists( file )) {
-        response setStatusCode HttpStatus.SC_NOT_FOUND
+        val html = file.getParent resolve s"${file.getFileName}.html"
 
-        val entity = new NStringEntity(s"<html><body><h1>File $file not found</h1></body></html>", ContentType.create("text/html", "UTF-8"))
+        if (isFile( html ))
+          serve( html )
+        else {
+          response setStatusCode HttpStatus.SC_NOT_FOUND
 
-        response.setEntity(entity)
-        println( s"File $file not found")
-      } else if (Files.isDirectory( file ) && Files.exists( index ) && Files.isReadable( index ) &&
-        Files.isRegularFile( index)) {
+          val entity = new NStringEntity(s"<html><body><h1>File $file not found</h1></body></html>", ContentType.create("text/html", "UTF-8"))
+
+          response.setEntity(entity)
+          println( s"File $file not found")
+        }
+      } else if (Files.isDirectory( file ) && isFile( index )) {
         serve( index )
-      } else if (!Files.isReadable(file) || Files.isDirectory( file )) {
-        response.setStatusCode(HttpStatus.SC_FORBIDDEN)
-        val entity = new NStringEntity("<html><body><h1>Access denied</h1></body></html>", ContentType.create("text/html", "UTF-8"))
-        response.setEntity(entity)
-        println( s"Cannot read file :$file" )
-      } else
+      } else if (!Files.isReadable(file) || Files.isDirectory( file ))
+        denied( file )
+      else
         serve( file )
 
       def extension( s: String ) =
@@ -100,17 +102,30 @@ class Server( val docRoot: Path, val port: Int ) {
       def serve( f: Path ): Unit = {
         val coreContext = HttpCoreContext.adapt(context)
         val conn = coreContext.getConnection(classOf[HttpConnection])
+
         response.setStatusCode(HttpStatus.SC_OK)
 
         val typ =
-          MediaType.table get extension( f.toString ) match {
-            case None => ContentType.APPLICATION_OCTET_STREAM
-            case Some( t ) => t
+          Files.probeContentType( f ) match {
+            case null => ContentType.APPLICATION_OCTET_STREAM
+            case t => ContentType.create( t )
           }
 
         val body = new NFileEntity( f.toFile, typ )
+
         response.setEntity(body)
         println( s"$conn: serving file $f" )
+      }
+
+      def isFile( f: Path ) = Files.exists( f ) && Files.isReadable( f ) && Files.isRegularFile( f )
+
+      def denied( path: Path ) = {
+        response.setStatusCode(HttpStatus.SC_FORBIDDEN)
+
+        val entity = new NStringEntity("<html><body><h1>Access denied</h1></body></html>", ContentType.create("text/html", "UTF-8"))
+
+        response.setEntity(entity)
+        println( s"Cannot read file :$file" )
       }
     }
   }
