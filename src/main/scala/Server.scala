@@ -1,3 +1,4 @@
+//@
 package xyz.hyperreal.spritz
 
 import java.nio.file.{Files, Path}
@@ -77,21 +78,28 @@ class Server( val docRoot: Path, val port: Int ) {
         val html = file.getParent resolve s"${file.getFileName}.html"
 
         if (isFile( html ))
-          serve( html )
+          serveOK( html )
         else {
-          response setStatusCode HttpStatus.SC_NOT_FOUND
+          val file404 = rootdir resolve "404.html"
 
-          val entity = new NStringEntity(s"<html><body><h1>File $file not found</h1></body></html>", ContentType.create("text/html", "UTF-8"))
+          if (isFile( file404 ))
+            serve( file404, HttpStatus.SC_NOT_FOUND )
+          else {
+            response setStatusCode HttpStatus.SC_NOT_FOUND
 
-          response.setEntity(entity)
-          println( s"File $file not found")
+            val entity = new NStringEntity( s"<html><body><h1>File $file not found</h1></body></html>", ContentType.create("text/html", "UTF-8") )
+
+            response.setEntity(entity)
+          }
+
+          println( s"File $file not found" )
         }
       } else if (Files.isDirectory( file ) && isFile( index )) {
-        serve( index )
+        serveOK( index )
       } else if (!Files.isReadable(file) || Files.isDirectory( file ))
         denied( file )
       else
-        serve( file )
+        serveOK( file )
 
       def extension( s: String ) =
         s lastIndexOf '.' match {
@@ -99,11 +107,13 @@ class Server( val docRoot: Path, val port: Int ) {
           case dot => s.substring( dot + 1 )
         }
 
-      def serve( f: Path ): Unit = {
+      def serveOK( f: Path ): Unit = serve( f, HttpStatus.SC_OK )
+
+      def serve( f: Path, sc: Int ): Unit = {
         val coreContext = HttpCoreContext.adapt(context)
         val conn = coreContext.getConnection(classOf[HttpConnection])
 
-        response.setStatusCode(HttpStatus.SC_OK)
+        response.setStatusCode( sc )
 
         val typ =
           Files.probeContentType( f ) match {
@@ -114,17 +124,24 @@ class Server( val docRoot: Path, val port: Int ) {
         val body = new NFileEntity( f.toFile, typ )
 
         response.setEntity(body)
-        println( s"$conn: serving file $f" )
+        println( s"$conn: serving file $f - $sc" )
       }
 
       def isFile( f: Path ) = Files.exists( f ) && Files.isReadable( f ) && Files.isRegularFile( f )
 
       def denied( path: Path ) = {
-        response.setStatusCode(HttpStatus.SC_FORBIDDEN)
+        val file403 = rootdir resolve "403.html"
 
-        val entity = new NStringEntity("<html><body><h1>Access denied</h1></body></html>", ContentType.create("text/html", "UTF-8"))
+        if (isFile( file403 ))
+          serve( file403, HttpStatus.SC_FORBIDDEN )
+        else {
+          response.setStatusCode(HttpStatus.SC_FORBIDDEN)
 
-        response.setEntity(entity)
+          val entity = new NStringEntity( "<html><body><h1>Access denied</h1></body></html>", ContentType.create("text/html", "UTF-8") )
+
+          response.setEntity( entity )
+        }
+
         println( s"Cannot read file :$file" )
       }
     }
