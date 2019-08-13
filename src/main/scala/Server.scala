@@ -142,7 +142,7 @@ class Server( val docRoot: Path, val port: Int ) {
           response.setEntity( entity )
         }
 
-        println( s"Cannot read file :$file" )
+        println( s"Cannot read file: $file" )
       }
     }
   }
