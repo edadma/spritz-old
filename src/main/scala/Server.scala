@@ -100,7 +100,7 @@ class Server(val docRoot: Path, val port: Int) {
       val protocol = request.getRequestLine.getProtocolVersion
       val path = URLDecoder.decode(uri, "UTF-8")
       val file = rootdir resolve path.substring(1)
-      val index = file resolve "index"
+      val index = file resolve "index.html"
 
       if (path startsWith "/*mimetype/")
         serveMimeIcon()
