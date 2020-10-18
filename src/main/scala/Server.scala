@@ -111,7 +111,7 @@ class Server(val docRoot: Path, val port: Int) {
       else if (Files.isDirectory(file) && isReadableFile(index))
         serveOK(index)
       else if (Files.isDirectory(file) && Files.isReadable(file))
-        serveListing(file)
+        serveListing()
       else if (!Files.isReadable(file))
         serveForbidden()
       else
@@ -217,11 +217,11 @@ class Server(val docRoot: Path, val port: Int) {
         }
       }
 
-      def serveListing(path: Path): Unit = {
+      def serveListing(): Unit = {
         val buf = new StringBuilder
 
         for (p <- Files
-               .list(path)
+               .list(file)
                .iterator()
                .asScala
                .toList
@@ -288,7 +288,7 @@ class Server(val docRoot: Path, val port: Int) {
              |  </head>
              |
              |  <body>
-             |    <h2>Index of <code>/${docRoot relativize path}</code></h2>
+             |    <h2>Index of <code>/${docRoot relativize file}</code></h2>
              |
              |    <table>
              |      <tr>
