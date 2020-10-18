@@ -51,7 +51,7 @@ class Server(val docRoot: Path, val port: Int) {
       .create
 
   private val modifiedFormatter =
-    DateTimeFormatter.ofPattern("dd-MM-yy HH:mm")
+    DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm")
 
   def start(): Unit = {
     server.start()
@@ -174,7 +174,6 @@ class Server(val docRoot: Path, val port: Int) {
 
         for (p <- Files.list(path).iterator().asScala) {
           val rel = docRoot relativize p
-          println(p, rel)
           val name = p.getFileName
           val modified =
             modifiedFormatter.format(
@@ -182,14 +181,38 @@ class Server(val docRoot: Path, val port: Int) {
                 .atZone(ZoneId.systemDefault))
           val size = Files size p
 
-          buf ++= s"""<tr><td><a href="/$rel">$name</a></td><td>$modified</td><td>$size</td></tr>"""
+          buf ++=
+            s"""
+               |      <tr>
+               |        <td><a href="/$rel">$name</a></td>
+               |        <td>$modified</td>
+               |        <td>$size</td>
+               |      </tr>
+               |""".stripMargin
         }
 
         val listing =
           s"""
              |<html>
+             |  <head>
+             |    <style>
+             |      table {
+             |        font-family: arial, sans-serif;
+             |      }
+             |
+             |      td, th {
+             |        text-align: left;
+             |        padding: 8px;
+             |      }
+             |
+             |      tr:nth-child(even) {
+             |        background-color: #dddddd;
+             |      }
+             |    </style>
+             |  </head>
+             |
              |  <body>
-             |    <h1>Index of /${docRoot relativize path}</h1>
+             |    <h2>Index of /${docRoot relativize path}</h2>
              |
              |    <table>
              |      <tr>
