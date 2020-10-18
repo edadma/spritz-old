@@ -2,9 +2,9 @@
 package xyz.hyperreal.spritz
 
 import scala.jdk.CollectionConverters._
-import java.nio.file.{Files, Path}
-import java.net.{URLDecoder, URLEncoder}
-import java.time.ZoneId
+import java.nio.file.{FileSystems, Files, Path}
+import java.net.{URI, URLDecoder, URLEncoder}
+import java.time.{Instant, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
@@ -97,32 +97,31 @@ class Server(val docRoot: Path, val port: Int) {
         throw new MethodNotSupportedException(method + " method not supported")
 
       val uri = request.getRequestLine.getUri
-      val path = URLDecoder.decode(uri, "UTF-8") drop 1
-      val file = rootdir resolve path
+      val protocol = request.getRequestLine.getProtocolVersion
+      val path = URLDecoder.decode(uri, "UTF-8")
+      val file = rootdir resolve path.substring(1)
       val index = file resolve "index"
 
-      if (path startsWith "*mimetype/")
+      if (path startsWith "/*mimetype/")
         serveMimeIcon()
-      else if (path == "*shutdown")
+      else if (path == "/*shutdown")
         shutdown()
-      else if (!Files.exists(file)) {
-        val html = file.getParent resolve s"${file.getFileName}.html"
-
-        if (isFile(html))
-          serveOK(html)
-        else
-          notFound()
-      } else if (Files.isDirectory(file) && isFile(index)) {
-        serveOK(index)
-      } else if (!Files.isReadable(file))
-        forbidden()
-      else if (Files.isDirectory(file))
-        serveListing(file)
-      else
+      else if (isReadableFile(file))
         serveOK(file)
+      else if (Files.isDirectory(file) && isReadableFile(index))
+        serveOK(index)
+      else if (Files.isDirectory(file) && Files.isReadable(file))
+        serveListing(file)
+      else if (!Files.isReadable(file))
+        serveForbidden()
+      else
+        serveNotFound()
+
+      println(
+        s"""$conn - ${Instant.now.toString} - "$method $path $protocol" - ${response.getStatusLine.getStatusCode} - ${response.getEntity.getContentLength} - ${response.getEntity.getContentType.toString drop 14}""")
 
       def serveMimeIcon(): Unit = {
-        val Array(_, a, b) = path.split("/")
+        val Array(_, _, a, b) = path.split("/")
         val file1 =
           Path.of("/usr/share/icons/oxygen/base/16x16/mimetypes", s"$a-$b.png")
         val file2 = Path.of("/usr/share/icons/oxygen/base/16x16/mimetypes",
@@ -137,7 +136,8 @@ class Server(val docRoot: Path, val port: Int) {
             "/usr/share/icons/oxygen/base/16x16/mimetypes/application-octet-stream.png"))
       }
 
-      def serveOK(f: Path): Unit = serve(f, HttpStatus.SC_OK)
+      def isReadableFile(f: Path) =
+        Files.exists(f) && Files.isReadable(f) && Files.isRegularFile(f)
 
       def serve(f: Path, sc: Int): Unit = {
         val typ =
@@ -149,46 +149,72 @@ class Server(val docRoot: Path, val port: Int) {
 
         response.setStatusCode(sc)
         response.setEntity(body)
-        println(s"$conn: $f - $sc - $typ")
       }
 
-      def isFile(f: Path) =
-        Files.exists(f) && Files.isReadable(f) && Files.isRegularFile(f)
+      def serveOK(f: Path): Unit = serve(f, HttpStatus.SC_OK)
 
-      def forbidden(): Unit = {
+      def serveForbidden(): Unit = {
         val file403 = rootdir resolve "403.html"
 
-        if (isFile(file403))
+        if (isReadableFile(file403))
           serve(file403, HttpStatus.SC_FORBIDDEN)
         else {
           response.setStatusCode(HttpStatus.SC_FORBIDDEN)
 
           val entity = new NStringEntity(
-            "<html><body><h1>Forbidden</h1></body></html>",
-            ContentType.create("text/html", "UTF-8"))
+            s"""<!DOCTYPE html>
+               |<html>
+               | <header>
+               |  <title>403 Forbidden</title>
+               | </header>
+               | <body>
+               |  <h2>Forbidden</h2>
+               |
+               |  You don't have permission to access <code>$path</code> on this server.
+               |
+               |  <hr />
+               |
+               |  <p><i>$VERSION Server at localhost Port $port</i></p>
+               | </body>
+               |</html>
+               |""".stripMargin,
+            ContentType.TEXT_HTML
+          )
 
           response.setEntity(entity)
         }
-
-        println(s"$conn: $file - 403")
       }
 
-      def notFound(): Unit = {
+      def serveNotFound(): Unit = {
         val file404 = rootdir resolve "404.html"
 
-        if (isFile(file404))
+        if (isReadableFile(file404))
           serve(file404, HttpStatus.SC_NOT_FOUND)
         else {
           response setStatusCode HttpStatus.SC_NOT_FOUND
 
           val entity = new NStringEntity(
-            s"<html><body><h1>File $file not found</h1></body></html>",
-            ContentType.create("text/html", "UTF-8"))
+            s"""<!DOCTYPE html>
+               |<html>
+               | <header>
+               |  <title>404 Not Found</title>
+               | </header>
+               | <body>
+               |  <h2>Not Found</h2>
+               |
+               |  The requested URL <code>$path</code> was not found on this server.
+               |
+               |  <hr />
+               |
+               |  <p><i>$VERSION Server at localhost Port $port</i></p>
+               | </body>
+               |</html>
+               |""".stripMargin,
+            ContentType.TEXT_HTML
+          )
 
           response.setEntity(entity)
         }
-
-        println(s"$conn: $file - 404")
       }
 
       def serveListing(path: Path): Unit = {
@@ -201,7 +227,8 @@ class Server(val docRoot: Path, val port: Int) {
                .toList
                .sorted) {
           val rel = docRoot relativize p
-          val href = URLEncoder.encode(rel.toString, "UTF-8")
+          val href = rel.iterator.asScala map (s =>
+            URLEncoder.encode(s.toString, "UTF-8")) mkString FileSystems.getDefault.getSeparator
           val icon =
             Files.probeContentType(p) match {
               case null => "application/octet-stream"
@@ -246,7 +273,7 @@ class Server(val docRoot: Path, val port: Int) {
              |  <head>
              |    <style>
              |      table {
-             |        font-family: monospaced;
+             |        font-family: "Lucida Console", Monaco, monospace;
              |      }
              |
              |      td, th {
@@ -261,7 +288,7 @@ class Server(val docRoot: Path, val port: Int) {
              |  </head>
              |
              |  <body>
-             |    <h2>Index of /${docRoot relativize path}</h2>
+             |    <h2>Index of <code>/${docRoot relativize path}</code></h2>
              |
              |    <table>
              |      <tr>
@@ -274,7 +301,7 @@ class Server(val docRoot: Path, val port: Int) {
              |
              |    <hr />
              |
-             |    <p>$VERSION at localhost port $port</p>
+             |    <p><i>$VERSION Server at localhost Port $port</i></p>
              |  </body>
              |</html>
              |""".stripMargin
@@ -285,7 +312,6 @@ class Server(val docRoot: Path, val port: Int) {
           new NStringEntity(listing, ContentType.create("text/html", "UTF-8"))
 
         response.setEntity(entity)
-
       }
     }
   }
