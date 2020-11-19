@@ -112,7 +112,7 @@ class Server(val docRoot: Path, val port: Int) {
         serveOK(index)
       else if (Files.isDirectory(file) && Files.isReadable(file))
         serveListing()
-      else if (!Files.isReadable(file))
+      else if (Files.exists(file) && !Files.isReadable(file))
         serveForbidden()
       else
         serveNotFound()
