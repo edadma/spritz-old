@@ -107,9 +107,9 @@ class Server(val docRoot: Path, val port: Int) {
       else if (path == "/*shutdown")
         shutdown()
       else if (isReadableFile(file))
-        serveOK(file)
+        serveFile(file)
       else if (Files.isDirectory(file) && isReadableFile(index))
-        serveOK(index)
+        serveFile(index)
       else if (Files.isDirectory(file) && Files.isReadable(file))
         serveListing()
       else if (Files.exists(file) && !Files.isReadable(file))
@@ -120,20 +120,18 @@ class Server(val docRoot: Path, val port: Int) {
       println(
         s"""$conn - ${Instant.now.toString} - "$method $path $protocol" - ${response.getStatusLine.getStatusCode} - ${response.getEntity.getContentLength} - ${response.getEntity.getContentType.toString drop 14}""")
 
+      // /usr/share/icons/oxygen/base/16x16/mimetypes
       def serveMimeIcon(): Unit = {
         val Array(_, _, a, b) = path.split("/")
-        val file1 =
-          Path.of("/usr/share/icons/oxygen/base/16x16/mimetypes", s"$a-$b.png")
-        val file2 = Path.of("/usr/share/icons/oxygen/base/16x16/mimetypes",
-                            s"$a-x-$b.png")
+        val file1 = Path.of("mimetypes", s"$a-$b.png")
+        val file2 = Path.of("mimetypes", s"$a-x-$b.png")
 
         if (Files.exists(file1))
-          serveOK(file1)
+          serveFile(file1)
         else if (Files.exists(file2))
-          serveOK(file2)
+          serveFile(file2)
         else
-          serveOK(Path.of(
-            "/usr/share/icons/oxygen/base/16x16/mimetypes/application-octet-stream.png"))
+          serveFile(Path.of("mimetypes/application-octet-stream.png"))
       }
 
       def isReadableFile(f: Path) =
@@ -151,7 +149,7 @@ class Server(val docRoot: Path, val port: Int) {
         response.setEntity(body)
       }
 
-      def serveOK(f: Path): Unit = serve(f, HttpStatus.SC_OK)
+      def serveFile(f: Path): Unit = serve(f, HttpStatus.SC_OK)
 
       def serveForbidden(): Unit = {
         val file403 = rootdir resolve "403.html"
@@ -219,21 +217,24 @@ class Server(val docRoot: Path, val port: Int) {
 
       def serveListing(): Unit = {
         val buf = new StringBuilder
+        val (dirs, files) = Files
+          .list(file)
+          .iterator()
+          .asScala
+          .toList
+          .partition(Files.isDirectory(_))
 
-        for (p <- Files
-               .list(file)
-               .iterator()
-               .asScala
-               .toList
-               .sorted) {
+        for (p <- dirs.sorted ++ files.sorted) {
           val rel = docRoot relativize p
           val href = rel.iterator.asScala map (s =>
             URLEncoder.encode(s.toString, "UTF-8")) mkString FileSystems.getDefault.getSeparator
           val icon =
-            Files.probeContentType(p) match {
-              case null => "application/octet-stream"
-              case t    => t
-            }
+            if (Files.isDirectory(p)) "inode/directory"
+            else
+              Files.probeContentType(p) match {
+                case null => "application/octet-stream"
+                case t    => t
+              }
           val name =
             if (Files.isDirectory(p)) s"${p.getFileName}/" else p.getFileName
           val modified =
@@ -243,7 +244,7 @@ class Server(val docRoot: Path, val port: Int) {
                   .atZone(ZoneId.systemDefault))
               .replace(".", "")
           val size =
-            if (Files.isDirectory(p)) "-"
+            if (Files.isDirectory(p)) ""
             else {
               val n = Files size p
 
@@ -253,8 +254,10 @@ class Server(val docRoot: Path, val port: Int) {
                 (n / 1000.0).formatted("%.1fK")
               else if (n < 1073741824)
                 (n / 1000000.0).formatted("%.1fM")
-              else
+              else if (n < 1099511627776L)
                 (n / 1000000000.0).formatted("%.1fG")
+              else
+                (n / 1000000000000.0).formatted("%.1fT")
             }
 
           buf ++=
