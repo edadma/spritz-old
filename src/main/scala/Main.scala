@@ -9,7 +9,7 @@ object Main extends App {
     System.exit(1)
   }
 
-  val server = new Server((Paths get args(0) toAbsolutePath) normalize, 8080)
+  val server = new Server(Paths get args(0), 8080)
 
   server.start()
   server.await()

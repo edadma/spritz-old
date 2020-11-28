@@ -3,7 +3,7 @@ package xyz.hyperreal.spritz
 
 import scala.jdk.CollectionConverters._
 import java.nio.file.{FileSystems, Files, Path}
-import java.net.{URI, URLDecoder, URLEncoder}
+import java.net.{URLDecoder, URLEncoder}
 import java.time.{Instant, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
