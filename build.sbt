@@ -42,29 +42,29 @@ libraryDependencies ++= Seq(
   "org.apache.httpcomponents" % "httpcore-nio" % "4.4.13"
 )
 
-libraryDependencies ++= Seq(
-  "org.slf4j" % "slf4j-simple" % "1.7.21"
-)
+//libraryDependencies ++= Seq(
+//  "org.slf4j" % "slf4j-simple" % "1.7.21"
+//)
 
-libraryDependencies ++= {
-  val akkaV = "2.6.10"
-  Seq(
-    "com.typesafe.akka" %% "akka-actor"    % akkaV,
-    "com.typesafe.akka" %% "akka-remote"   % akkaV,
-    "com.typesafe.akka" %% "akka-testkit"  % akkaV    % "test"
-  )
-}
+//libraryDependencies ++= {
+//  val akkaV = "2.6.10"
+//  Seq(
+//    "com.typesafe.akka" %% "akka-actor"    % akkaV,
+//    "com.typesafe.akka" %% "akka-remote"   % akkaV,
+//    "com.typesafe.akka" %% "akka-testkit"  % akkaV    % "test"
+//  )
+//}
 
-libraryDependencies ++= {
-  val akka_http = "10.2.1"
-  Seq(
-    "com.typesafe.akka" %% "akka-http-core"       % akka_http,
-    "com.typesafe.akka" %% "akka-http"            % akka_http,
-    "com.typesafe.akka" %% "akka-http-testkit"    % akka_http,
-    "com.typesafe.akka" %% "akka-http-spray-json" % akka_http,
-    "com.typesafe.akka" %% "akka-http-jackson"    % akka_http
-  )
-}
+//libraryDependencies ++= {
+//  val akka_http = "10.2.1"
+//  Seq(
+//    "com.typesafe.akka" %% "akka-http-core"       % akka_http,
+//    "com.typesafe.akka" %% "akka-http"            % akka_http,
+//    "com.typesafe.akka" %% "akka-http-testkit"    % akka_http,
+//    "com.typesafe.akka" %% "akka-http-spray-json" % akka_http,
+//    "com.typesafe.akka" %% "akka-http-jackson"    % akka_http
+//  )
+//}
 
 coverageExcludedPackages := ".*Main"
 

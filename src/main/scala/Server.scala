@@ -65,7 +65,7 @@ class Server(val docRoot: Path, val port: Int) {
     })
   }
 
-  def shutdown(): Unit = server.shutdown(5, TimeUnit.SECONDS)
+  def shutdown(): Unit = server.shutdown(1, TimeUnit.SECONDS)
 
   def await(): Unit = server.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
 
