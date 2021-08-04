@@ -37,7 +37,7 @@ class Server(val docRoot: Path, val port: Int) {
     s"Document root must be an accessible directory")
 
   val VERSION = "Spritz/0.1"
-  private val rootDir = docRoot.toAbsolutePath.normalize
+  private val docRootPath = docRoot.toAbsolutePath.normalize
   private val sslContext = null
   private val config =
     IOReactorConfig.custom.setSoTimeout(15000).setTcpNoDelay(true).build
@@ -48,7 +48,7 @@ class Server(val docRoot: Path, val port: Int) {
       .setIOReactorConfig(config)
       .setSslContext(sslContext)
       .setExceptionLogger(ExceptionLogger.STD_ERR)
-      .registerHandler("*", new HttpFileHandler(rootDir))
+      .registerHandler("*", new HttpFileHandler(docRootPath))
       .create
 
   private val modifiedFormatter =
@@ -56,7 +56,7 @@ class Server(val docRoot: Path, val port: Int) {
 
   def start(): Unit = {
     server.start()
-    println(s"Serving $rootDir on ${server.getEndpoint.getAddress}")
+    println(s"Serving $docRootPath on ${server.getEndpoint.getAddress}")
 
     Runtime.getRuntime.addShutdownHook(new Thread {
       override def run(): Unit = {
@@ -69,7 +69,7 @@ class Server(val docRoot: Path, val port: Int) {
 
   def await(): Unit = server.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
 
-  private class HttpFileHandler(val rootdir: Path)
+  private class HttpFileHandler(val handlerRoot: Path)
       extends HttpAsyncRequestHandler[HttpRequest] {
     def processRequest(
         request: HttpRequest,
@@ -99,7 +99,7 @@ class Server(val docRoot: Path, val port: Int) {
       val uri = request.getRequestLine.getUri
       val protocol = request.getRequestLine.getProtocolVersion
       val path = URLDecoder.decode(uri, "UTF-8")
-      val file = rootdir resolve path.substring(1)
+      val file = handlerRoot resolve path.substring(1)
       val index = file resolve "index.html"
 
       if (path startsWith "/*mimetype/")
@@ -152,7 +152,7 @@ class Server(val docRoot: Path, val port: Int) {
       def serveFile(f: Path): Unit = serve(f, HttpStatus.SC_OK)
 
       def serveForbidden(): Unit = {
-        val file403 = rootdir resolve "403.html"
+        val file403 = handlerRoot resolve "403.html"
 
         if (isReadableFile(file403))
           serve(file403, HttpStatus.SC_FORBIDDEN)
@@ -184,7 +184,7 @@ class Server(val docRoot: Path, val port: Int) {
       }
 
       def serveNotFound(): Unit = {
-        val file404 = rootdir resolve "404.html"
+        val file404 = handlerRoot resolve "404.html"
 
         if (isReadableFile(file404))
           serve(file404, HttpStatus.SC_NOT_FOUND)
@@ -225,7 +225,7 @@ class Server(val docRoot: Path, val port: Int) {
           .partition(Files.isDirectory(_))
 
         for (p <- dirs.sorted ++ files.sorted) {
-          val rel = rootdir relativize p
+          val rel = handlerRoot relativize p
           val href = rel.iterator.asScala map (s =>
             URLEncoder.encode(s.toString, "UTF-8")) mkString FileSystems.getDefault.getSeparator
           val icon =
@@ -291,7 +291,7 @@ class Server(val docRoot: Path, val port: Int) {
              |  </head>
              |
              |  <body>
-             |    <h2>Index of <code>/${rootDir relativize file}</code></h2>
+             |    <h2>Index of <code>/${handlerRoot relativize file}</code></h2>
              |
              |    <table>
              |      <tr>
