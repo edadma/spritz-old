@@ -1,8 +1,8 @@
 name := "spritz"
 
-version := "0.2.1"
+version := "0.2.2"
 
-scalaVersion := "2.13.4"
+scalaVersion := "2.13.6"
 
 scalacOptions ++= Seq( "-deprecation", "-feature", "-unchecked", "-language:postfixOps", "-language:implicitConversions", "-language:existentials" )
 
@@ -15,8 +15,7 @@ resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releas
 resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
 
 libraryDependencies ++= Seq(
-	"org.scalatest" %% "scalatest" % "3.0.8" % "test",
-	"org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+	"org.scalatest" %% "scalatest" % "3.2.9" % "test",
 )
 
 libraryDependencies ++= Seq(
@@ -34,12 +33,12 @@ libraryDependencies ++= Seq(
 //)
 
 libraryDependencies ++= Seq(
-  "xyz.hyperreal" %% "yaml" % "0.2",
+  "xyz.hyperreal" %% "yaml" % "0.1.0-snapshot.13",
   "xyz.hyperreal" %% "args" % "0.2"
 )
 
 libraryDependencies ++= Seq(
-  "org.apache.httpcomponents" % "httpcore-nio" % "4.4.13"
+  "org.apache.httpcomponents" % "httpcore-nio" % "4.4.14"
 )
 
 //libraryDependencies ++= Seq(
@@ -66,17 +65,15 @@ libraryDependencies ++= Seq(
 //  )
 //}
 
-coverageExcludedPackages := ".*Main"
+mainClass := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
 
-mainClass in (Compile, run) := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
+assembly / mainClass := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
 
-mainClass in assembly := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
-
-assemblyJarName in assembly := name.value + "-" + version.value + ".jar"
+assembly / assemblyJarName := name.value + "-" + version.value + ".jar"
 
 publishMavenStyle := true
 
-publishArtifact in Test := false
+Test / publishArtifact := false
 
 pomIncludeRepository := { _ => false }
 
