@@ -37,7 +37,7 @@ class Server(val docRoot: Path, val port: Int) {
     s"Document root must be an accessible directory")
 
   val VERSION = "Spritz/0.1"
-  private val rootdir = docRoot.toAbsolutePath.normalize
+  private val rootDir = docRoot.toAbsolutePath.normalize
   private val sslContext = null
   private val config =
     IOReactorConfig.custom.setSoTimeout(15000).setTcpNoDelay(true).build
@@ -48,7 +48,7 @@ class Server(val docRoot: Path, val port: Int) {
       .setIOReactorConfig(config)
       .setSslContext(sslContext)
       .setExceptionLogger(ExceptionLogger.STD_ERR)
-      .registerHandler("*", new HttpFileHandler(rootdir))
+      .registerHandler("*", new HttpFileHandler(rootDir))
       .create
 
   private val modifiedFormatter =
@@ -56,7 +56,7 @@ class Server(val docRoot: Path, val port: Int) {
 
   def start(): Unit = {
     server.start()
-    println(s"Serving $rootdir on ${server.getEndpoint.getAddress}")
+    println(s"Serving $rootDir on ${server.getEndpoint.getAddress}")
 
     Runtime.getRuntime.addShutdownHook(new Thread {
       override def run(): Unit = {
@@ -225,7 +225,7 @@ class Server(val docRoot: Path, val port: Int) {
           .partition(Files.isDirectory(_))
 
         for (p <- dirs.sorted ++ files.sorted) {
-          val rel = docRoot relativize p
+          val rel = rootdir relativize p
           val href = rel.iterator.asScala map (s =>
             URLEncoder.encode(s.toString, "UTF-8")) mkString FileSystems.getDefault.getSeparator
           val icon =
@@ -291,7 +291,7 @@ class Server(val docRoot: Path, val port: Int) {
              |  </head>
              |
              |  <body>
-             |    <h2>Index of <code>/${docRoot relativize file}</code></h2>
+             |    <h2>Index of <code>/${rootDir relativize file}</code></h2>
              |
              |    <table>
              |      <tr>
