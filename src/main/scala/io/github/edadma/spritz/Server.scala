@@ -1,5 +1,5 @@
 //@
-package xyz.hyperreal.spritz
+package io.github.edadma.spritz
 
 import scala.jdk.CollectionConverters._
 import java.nio.file.{FileSystems, Files, Path}

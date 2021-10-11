@@ -6,7 +6,7 @@ scalaVersion := "2.13.6"
 
 scalacOptions ++= Seq( "-deprecation", "-feature", "-unchecked", "-language:postfixOps", "-language:implicitConversions", "-language:existentials" )
 
-organization := "xyz.hyperreal"
+organization := "io.github.edadma"
 
 //resolvers += Resolver.sonatypeRepo( "snapshots" )
 
@@ -33,8 +33,7 @@ libraryDependencies ++= Seq(
 //)
 
 libraryDependencies ++= Seq(
-  "xyz.hyperreal" %% "yaml" % "0.1.0-snapshot.13",
-  "xyz.hyperreal" %% "args" % "0.2"
+  "io.github.edadma" %% "yaml" % "0.1.11",
 )
 
 libraryDependencies ++= Seq(

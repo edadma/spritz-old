@@ -1,4 +1,4 @@
-package xyz.hyperreal.spritz
+package io.github.edadma.spritz
 
 import java.nio.file.Paths
 
