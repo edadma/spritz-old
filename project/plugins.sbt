@@ -1,1 +1,1 @@
-addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
+addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.2")

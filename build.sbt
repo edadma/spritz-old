@@ -1,72 +1,40 @@
 name := "spritz"
 
-version := "0.2.2"
+version := "0.1.0"
 
 scalaVersion := "2.13.6"
 
-scalacOptions ++= Seq( "-deprecation", "-feature", "-unchecked", "-language:postfixOps", "-language:implicitConversions", "-language:existentials" )
+scalacOptions ++= Seq(
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-language:postfixOps",
+  "-language:implicitConversions",
+  "-language:existentials"
+)
 
 organization := "io.github.edadma"
 
-//resolvers += Resolver.sonatypeRepo( "snapshots" )
+githubOwner := "edadma"
 
-resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"
-
-resolvers += "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
+githubRepository := name.value
 
 libraryDependencies ++= Seq(
-	"org.scalatest" %% "scalatest" % "3.2.9" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.9" % "test"
 )
 
 libraryDependencies ++= Seq(
-//	"org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
-//	"org.scala-lang.modules" %% "scala-xml" % "1.0.6"
-//	"org.scala-lang.modules" %% "scala-swing" % "2.0.3"
-)
-
-//libraryDependencies ++= Seq(
-//  "com.typesafe" % "config" % "1.3.3"
-//)
-
-//libraryDependencies ++= Seq(
-//  "jline" % "jline" % "2.14.6"
-//)
-
-libraryDependencies ++= Seq(
-  "io.github.edadma" %% "yaml" % "0.1.11",
-)
-
-libraryDependencies ++= Seq(
+  "com.github.scopt" %% "scopt" % "4.0.1",
   "org.apache.httpcomponents" % "httpcore-nio" % "4.4.14"
 )
 
-//libraryDependencies ++= Seq(
-//  "org.slf4j" % "slf4j-simple" % "1.7.21"
-//)
+libraryDependencies ++= Seq(
+  "io.github.edadma" %% "yaml" % "0.1.11"
+)
 
-//libraryDependencies ++= {
-//  val akkaV = "2.6.10"
-//  Seq(
-//    "com.typesafe.akka" %% "akka-actor"    % akkaV,
-//    "com.typesafe.akka" %% "akka-remote"   % akkaV,
-//    "com.typesafe.akka" %% "akka-testkit"  % akkaV    % "test"
-//  )
-//}
+mainClass := Some("io.github.edadma." + name.value.replace('-', '_') + ".Main")
 
-//libraryDependencies ++= {
-//  val akka_http = "10.2.1"
-//  Seq(
-//    "com.typesafe.akka" %% "akka-http-core"       % akka_http,
-//    "com.typesafe.akka" %% "akka-http"            % akka_http,
-//    "com.typesafe.akka" %% "akka-http-testkit"    % akka_http,
-//    "com.typesafe.akka" %% "akka-http-spray-json" % akka_http,
-//    "com.typesafe.akka" %% "akka-http-jackson"    % akka_http
-//  )
-//}
-
-mainClass := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
-
-assembly / mainClass := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
+assembly / mainClass := Some("io.github.edadma." + name.value.replace('-', '_') + ".Main")
 
 assembly / assemblyJarName := name.value + "-" + version.value + ".jar"
 

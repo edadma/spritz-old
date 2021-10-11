@@ -7,7 +7,6 @@ import java.net.{URLDecoder, URLEncoder}
 import java.time.{Instant, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
-
 import org.apache.http.{
   ExceptionLogger,
   HttpConnection,
@@ -19,7 +18,7 @@ import org.apache.http.{
 import org.apache.http.entity.ContentType
 import org.apache.http.impl.nio.bootstrap.ServerBootstrap
 import org.apache.http.impl.nio.reactor.IOReactorConfig
-import org.apache.http.nio.entity.{NFileEntity, NStringEntity}
+import org.apache.http.nio.entity.{NByteArrayEntity, NFileEntity, NStringEntity}
 import org.apache.http.nio.protocol.{
   BasicAsyncRequestConsumer,
   BasicAsyncResponseProducer,
@@ -29,14 +28,14 @@ import org.apache.http.nio.protocol.{
 }
 import org.apache.http.protocol.{HttpContext, HttpCoreContext}
 
-class Server(val docRoot: Path, val port: Int) {
+class Server(val docRoot: Path, val port: Int, verbose: Boolean) {
 
   require(
-    Files.exists(docRoot) && Files.isDirectory(docRoot) && Files.isReadable(
-      docRoot),
-    s"Document root must be an accessible directory")
+    Files.exists(docRoot) && Files.isDirectory(docRoot) && Files.isReadable(docRoot),
+    s"Document root must be an accessible directory"
+  )
 
-  val VERSION = "Spritz/0.1"
+  val VERSION = "Spritz/0.1.0"
   private val docRootPath = docRoot.toAbsolutePath.normalize
   private val sslContext = null
   private val config =
@@ -69,26 +68,30 @@ class Server(val docRoot: Path, val port: Int) {
 
   def await(): Unit = server.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
 
-  private class HttpFileHandler(val handlerRoot: Path)
-      extends HttpAsyncRequestHandler[HttpRequest] {
-    def processRequest(
-        request: HttpRequest,
-        context: HttpContext): HttpAsyncRequestConsumer[HttpRequest] = {
+  def readResource(name: String): Option[Array[Byte]] = {
+    val is = getClass.getResourceAsStream(name)
+
+    if (is ne null) {
+      val data = is.readAllBytes()
+
+      is.close()
+      Some(data)
+    } else None
+  }
+
+  private class HttpFileHandler(val handlerRoot: Path) extends HttpAsyncRequestHandler[HttpRequest] {
+    def processRequest(request: HttpRequest, context: HttpContext): HttpAsyncRequestConsumer[HttpRequest] = {
       new BasicAsyncRequestConsumer
     }
 
-    def handle(request: HttpRequest,
-               httpexchange: HttpAsyncExchange,
-               context: HttpContext): Unit = {
+    def handle(request: HttpRequest, httpexchange: HttpAsyncExchange, context: HttpContext): Unit = {
       val response = httpexchange.getResponse
 
       handleInternal(request, response, context)
       httpexchange.submitResponse(new BasicAsyncResponseProducer(response))
     }
 
-    private def handleInternal(request: HttpRequest,
-                               response: HttpResponse,
-                               context: HttpContext): Unit = {
+    private def handleInternal(request: HttpRequest, response: HttpResponse, context: HttpContext): Unit = {
       val coreContext = HttpCoreContext.adapt(context)
       val conn = coreContext.getConnection(classOf[HttpConnection])
       val method = request.getRequestLine.getMethod.toUpperCase
@@ -118,24 +121,32 @@ class Server(val docRoot: Path, val port: Int) {
         serveNotFound()
 
       println(
-        s"""$conn - ${Instant.now.toString} - "$method $path $protocol" - ${response.getStatusLine.getStatusCode} - ${response.getEntity.getContentLength} - ${response.getEntity.getContentType.toString drop 14}""")
+        s"""$conn - ${Instant.now.toString} - "$method $path $protocol" - ${response.getStatusLine.getStatusCode} - ${response.getEntity.getContentLength} - ${response.getEntity.getContentType.toString drop 14}"""
+      )
 
       // /usr/share/icons/oxygen/base/16x16/mimetypes
       def serveMimeIcon(): Unit = {
         val Array(_, _, a, b) = path.split("/")
-        val file1 = Path.of("mimetypes", s"$a-$b.png")
-        val file2 = Path.of("mimetypes", s"$a-x-$b.png")
+        val file1 = s"mimetypes/$a-$b.png"
+        val file2 = s"mimetypes/$a-x-$b.png"
+        val file3 = "mimetypes/application-octet-stream.png"
 
-        if (Files.exists(file1))
-          serveFile(file1)
-        else if (Files.exists(file2))
-          serveFile(file2)
-        else
-          serveFile(Path.of("mimetypes/application-octet-stream.png"))
+        servePNG(readResource(file1) orElse (readResource(file2) orElse readResource(file3)))
       }
 
       def isReadableFile(f: Path) =
         Files.exists(f) && Files.isReadable(f) && Files.isRegularFile(f)
+
+      def servePNG(png: Option[Array[Byte]]): Unit = {
+        png match {
+          case Some(data) =>
+            response.setStatusCode(HttpStatus.SC_OK)
+            response.setEntity(new NByteArrayEntity(data, ContentType.IMAGE_PNG))
+          case None =>
+            response setStatusCode HttpStatus.SC_NOT_FOUND
+            response setEntity new NStringEntity("no image")
+        }
+      }
 
       def serve(f: Path, sc: Int): Unit = {
         val typ =
@@ -227,7 +238,8 @@ class Server(val docRoot: Path, val port: Int) {
         for (p <- dirs.sorted ++ files.sorted) {
           val rel = handlerRoot relativize p
           val href = rel.iterator.asScala map (s =>
-            URLEncoder.encode(s.toString, "UTF-8")) mkString FileSystems.getDefault.getSeparator
+            URLEncoder.encode(s.toString, "UTF-8")
+          ) mkString FileSystems.getDefault.getSeparator
           val icon =
             if (Files.isDirectory(p)) "inode/directory"
             else
@@ -241,7 +253,8 @@ class Server(val docRoot: Path, val port: Int) {
             modifiedFormatter
               .format(
                 (Files getLastModifiedTime p toInstant)
-                  .atZone(ZoneId.systemDefault))
+                .atZone(ZoneId.systemDefault)
+              )
               .replace(".", "")
           val size =
             if (Files.isDirectory(p)) ""
